@@ -39,34 +39,6 @@ guatemala <- guatemala %>%
   separate(date, sep="-", into = c("year", "month", "day")) %>% 
   unite(date, year, month, sep="-")
 
-# Agrupar por año-mes
-summarized_data_by_month <- group_by(guatemala, date) %>% summarize(
-  retail_recreation_mean = mean(retail_recreation, na.rm=TRUE),
-  retail_recreation_max = max(retail_recreation, na.rm=TRUE),
-  retail_recreation_min = min(retail_recreation, na.rm=TRUE),
-  
-  grocery_pharmacy_mean = mean(grocery_pharmacy, na.rm=TRUE),
-  grocery_pharmacy_max = max(grocery_pharmacy, na.rm=TRUE),
-  grocery_pharmacy_min = min(grocery_pharmacy, na.rm=TRUE),
-  
-  parks_mean = mean(parks, na.rm=TRUE),
-  parks_max = max(parks, na.rm=TRUE),
-  parks_min = min(parks, na.rm=TRUE),
-  
-  transit_stations_mean = mean(transit_stations, na.rm=TRUE),
-  transit_stations_max = max(transit_stations, na.rm=TRUE),
-  transit_stations_min = min(transit_stations, na.rm=TRUE),
-  
-  workplaces_mean = mean(workplaces, na.rm=TRUE),
-  workplaces_max = max(workplaces, na.rm=TRUE),
-  workplaces_min = min(workplaces, na.rm=TRUE),
-  
-  residential_mean = mean(residential, na.rm=TRUE),
-  residential_max = max(residential, na.rm=TRUE),
-  residential_min = min(residential, na.rm=TRUE)
-)
-
-
 get_summarized_data <- function(grouped_data){
   summarize(grouped_data,
     retail_recreation_mean = mean(retail_recreation, na.rm=TRUE),
@@ -199,8 +171,23 @@ plot_by_month <- function(month, show_legend=F){
   fig
 }
 
-departments <- tail(unique(guatemala$sub_region_1), 22)
 
+plot_by_city <- function(department, city, month) {
+  # Filtrar por ciudad y mes ya grupar por dia
+  plot_data <- get_summarized_data(group_by(filter(guatemala, sub_region_1 == department, date == month), day))
+  
+  fig <- plot_ly(plot_data, x=~day, y=~residential_mean, type='scatter', mode='lines',
+                 showlegend=T, name='Residential')
+  
+  fig <- fig %>% add_trace(x=~day, y=~retail_recreation_mean, type='scatter', mode='lines', 
+            line=list(color='rgb(0, 100, 80)'), showlegend=T, name='Comercio y Recreación', legendgroup=~day)
+  
+  fig
+  
+}
+
+## Grid de gráficas por departamento
+departments <- tail(unique(guatemala$sub_region_1), 22)
 all_plots <- to_list(
   for (d in departments)
     if (d != tail(departments, 1))
@@ -208,9 +195,10 @@ all_plots <- to_list(
   else
     plot_by_department(d, show_legend = T)
     )
+subplot(all_plots, nrows=4, shareX=T, shareY=T)
 
+## Grid de gráficas por día
 months <- unique(guatemala$date)
-
 all_plots <- to_list(
   for (m in months)
     if (m != tail(months, 1))
